@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #70c5ce;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #game {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background: #70c5ce;
+            overflow: hidden;
+        }
+        #bird {
+            position: absolute;
+            width: 40px;
+            height: 30px;
+            background: #ffcc00;
+            border-radius: 50%;
+            left: 50px;
+            top: 300px;
+        }
+        .pipe {
+            position: absolute;
+            width: 60px;
+            background: #4CAF50;
+            right: -60px;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            color: white;
+            z-index: 100;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            color: white;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="score">0</div>
+        <div id="bird"></div>
+        <div id="game-over">
+            Game Over<br>
+            <button onclick="resetGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const bird = document.getElementById('bird');
+        const game = document.getElementById('game');
+        const scoreElement = document.getElementById('score');
+        const gameOverElement = document.getElementById('game-over');
+        
+        let birdY = 300;
+        let birdVelocity = 0;
+        let gravity = 0.5;
+        let pipes = [];
+        let score = 0;
+        let gameRunning = true;
+        
+        // Обработчик клика/тапа
+        game.addEventListener('click', () => {
+            if (gameRunning) {
+                birdVelocity = -10;
+            }
+        });
+        
+        // Создание труб
+        function createPipe() {
+            const gap = 150;
+            const topHeight = Math.random() * (game.offsetHeight - gap - 100) + 50;
+            
+            const topPipe = document.createElement('div');
+            topPipe.className = 'pipe';
+            topPipe.style.height = topHeight + 'px';
+            topPipe.style.top = '0';
+            
+            const bottomPipe = document.createElement('div');
+            bottomPipe.className = 'pipe';
+            bottomPipe.style.height = (game.offsetHeight - topHeight - gap) + 'px';
+            bottomPipe.style.bottom = '0';
+            
+            game.appendChild(topPipe);
+            game.appendChild(bottomPipe);
+            
+            pipes.push({
+                top: topPipe,
+                bottom: bottomPipe,
+                x: game.offsetWidth,
+                passed: false
+            });
+        }
+        
+        // Игровой цикл
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            // Движение птички
+            birdVelocity += gravity;
+            birdY += birdVelocity;
+            bird.style.top = birdY + 'px';
+            
+            // Движение труб
+            pipes.forEach(pipe => {
+                pipe.x -= 2;
+                pipe.top.style.left = pipe.x + 'px';
+                pipe.bottom.style.left = pipe.x + 'px';
+                
+                // Проверка столкновений
+                if (
+                    (birdY < pipe.top.offsetHeight || 
+                     birdY + bird.offsetHeight > game.offsetHeight - pipe.bottom.offsetHeight) &&
+                    pipe.x < 90 && pipe.x + 60 > 50
+                ) {
+                    endGame();
+                }
+                
+                // Подсчет очков
+                if (!pipe.passed && pipe.x < 50) {
+                    pipe.passed = true;
+                    score++;
+                    scoreElement.textContent = score;
+                }
+                
+                // Удаление труб за пределами экрана
+                if (pipe.x < -60) {
+                    game.removeChild(pipe.top);
+                    game.removeChild(pipe.bottom);
+                    pipes = pipes.filter(p => p !== pipe);
+                }
+            });
+            
+            // Проверка границ экрана
+            if (birdY > game.offsetHeight || birdY < 0) {
+                endGame();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function endGame() {
+            gameRunning = false;
+            gameOverElement.style.display = 'block';
+        }
+        
+        function resetGame() {
+            // Очистка труб
+            pipes.forEach(pipe => {
+                game.removeChild(pipe.top);
+                game.removeChild(pipe.bottom);
+            });
+            pipes = [];
+            
+            // Сброс параметров
+            birdY = 300;
+            birdVelocity = 0;
+            score = 0;
+            scoreElement.textContent = '0';
+            gameOverElement.style.display = 'none';
+            gameRunning = true;
+            
+            // Перезапуск игры
+            gameLoop();
+        }
+        
+        // Запуск игры
+        setInterval(createPipe, 1500);
+        gameLoop();
+        
+        // Интеграция с Telegram WebApp
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.expand();
+            Telegram.WebApp.enableClosingConfirmation();
+        }
+    </script>
+</body>
+</html>
